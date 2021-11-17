@@ -112,19 +112,51 @@ def createMesh(name, origin, verts, edges, faces, height = 10):
     return ob
 
 
-def img_to_mesh(origin: (int, int, int), imgpath: str, 
-                scale=(1, 1, 1), rot=(0, 0, 0)):
+def post_import(obj):
+
+    '''
+    Performs post import operations such as select object and set
+    origin to the center of mass.
+    '''
+
+    obj.select_set(True)
+    bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
+    obj.select_set(False)
+
+def img_to_mesh(imgpath: str,
+                invert=False,
+                epsilon=0.5,
+                height=10,
+                scale=(1, 1, 1),
+                rot=(0, 0, 0)):
+
+    """Loads an image as a mesh in Blender.
+
+    Args:
+        imgpath (str): path to the image
+        invert (bool, optional): invert the procedure on how the mesh is generated. Defaults to False.
+        epsilon (float, optional): threshold controling how the mesh is generated. 
+                                    If not inverted, the higher the value the denser
+                                    the mesh. Defaults to 0.5.
+        scale (tuple, optional): scale the mesh. Defaults to (1, 1, 1).
+        rot (tuple, optional): rotates the mesh. Defaults to (0, 0, 0).
+
+    Returns:
+        object: the new blender's object
+    """    
     
-    threshold = 0.5
     # TODO: add invert flag
-    invert = False
     # Load image into blender and then into numpy array
     img = load_image(imgpath)
-    # Use threshold to determine what pixels are holes
-    low_values_indices = img > threshold  # Where values are low
-    print(low_values_indices)
-    img[low_values_indices] = 0
-    img[np.invert(low_values_indices)] = 255 
+    # Use threshold epsilon to determine what pixels are holes
+    low_values_indices = img > epsilon  # Where values are low
+    if invert:
+        img[low_values_indices] = 255
+        img[np.invert(low_values_indices)] = 0 
+    else:    
+        img[low_values_indices] = 0
+        img[np.invert(low_values_indices)] = 255 
+    
     # Create 2D hole grid
     verts, faces = grid_to_mesh(img, 0.5, 0.5)
 
@@ -133,12 +165,17 @@ def img_to_mesh(origin: (int, int, int), imgpath: str,
     d_faces = faces
 
     # Create mesh inside blender
-    ob = createMesh('Image_mesh', origin, d_verts, [], d_faces)
+    # TODO this is lazy coding. I should set the origin here
+    # not in the post_import() function.
+    origin = (0, 0, 0)
+    obj = createMesh('Image_mesh', origin, d_verts, [], d_faces, height=height)
     
-    ob.scale = scale
-    ob.rotation_euler = rot
+    obj.scale = scale
+    obj.rotation_euler = rot
     
-    return ob
+    post_import(obj)
+
+    return obj
 
 def clean_scene():
     for o in bpy.context.scene.objects:
