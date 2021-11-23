@@ -1,6 +1,8 @@
 # ImagesAsMesh
 Blender addon to import images as meshes. Inspired by: [ImagesAsPlanes](https://github.com/sambler/myblenderaddons/blob/9b75b908aae5dad7362eeba89121f4dc7ba4ff46/io_import_images_as_planes.py#L883)
 
+# How it works
+The algorithm simply creates a voxel for each image pixel depending on a threshold. For best results you should use black and white images. At the moment, only square images are supported.
 # Installation
 
 It's like just about every other Blender addon. Download the file here: TODO ADD LINK
