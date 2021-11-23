@@ -28,9 +28,15 @@ class IMPORT_OT_image_to_meshes(bpy.types.Operator):
     height: FloatProperty(name="Height", description="Height of the created mesh",
                            default=1.0, min=0.001, soft_min=0.001, subtype='DISTANCE', unit='LENGTH')
                            
-    epsilon: FloatProperty(name="Height", description="Threshold controling how the mesh is generated. If invert is False, \
+    epsilon: FloatProperty(name="Threshold", description="Threshold controling how the mesh is generated. If invert is False, \
                             the higher the value the denser the mesh.",
                            default=0.5, min=0.0, max=1)
+                           
+    resolution: FloatProperty(name="Resolution", description="Resolution of the 3D mesh in respect to the input image. \
+                        Beware that if the image is high resolution the import time increases. For high resolution \
+                        images you may want to decrease this value.",
+                        default=50, min=0.0, max=100)
+                           
     invert: BoolProperty(name="Invert mesh", default=False, description="Inverts the process on which the mesh is generated")
 
     def execute(self, context):
@@ -41,6 +47,7 @@ class IMPORT_OT_image_to_meshes(bpy.types.Operator):
             path = os.path.join(self.directory, f.name)
             # img_to_mesh((0,0,0), path)
             img_to_mesh(imgpath=path,
+                        resolution=self.resolution,
                         invert=self.invert,
                         epsilon=self.epsilon,
                         height=self.height)
@@ -59,6 +66,7 @@ class IMPORT_OT_image_to_meshes(bpy.types.Operator):
 
         box.prop(self, "epsilon")
         box.prop(self, "invert")
+        box.prop(self, "resolution")
         box.prop(self, "height")
         
     def invoke(self, context, event):

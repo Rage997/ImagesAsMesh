@@ -4,13 +4,15 @@ import numpy as np
 import math
 import bmesh
 
-def load_image(path:str) -> np.array:
+def load_image(path:str, scale_factor=0.5) -> np.array:
     
     img = bpy.data.images.load(path)
     print('Number pixels', img.size[:])
-    img.scale(50, 50) 
-    print('Number pixels after compression', img.size[:])
+    scale_x, scale_y = img.size[0]*scale_factor, img.size[1]*scale_factor 
+    img.scale(int(scale_x), int(scale_x)) 
+    
     width, height = img.size[0], img.size[1]
+    print('Number pixels after compression ({}, {})'.format(width, height))
     arr = np.array(img.pixels[:])
     # Blender store images as a list containing the RGBA components
     # of each pixel, Here they are converted into grayscale, and then
@@ -22,10 +24,10 @@ def load_image(path:str) -> np.array:
         grid[x//4] = (arr[x]+arr[x+1]+arr[x+2])/3 #Convert img to gray code. 
     
     grid = np.reshape(grid, (width, height)) #reshape as matrix 
-    
+    print(grid.shape)
     return grid
 
-def grid_to_mesh(grid, cell_width, cell_height, hole_func=None):
+def grid_to_mesh(grid, cell_width, cell_height):
     """
     Generate mesh from 
     Arguments:
@@ -38,14 +40,12 @@ def grid_to_mesh(grid, cell_width, cell_height, hole_func=None):
         vertices (list):
         faces (list):
     """
-    width, height = [x+1 for x in grid.shape]
+#    width, height = [x+1 for x in grid.shape]
+#    print(width, height)
     vertex_dict = {}
 
     vertices = []
     faces = []
-
-    if hole_func is None:
-        hole_func = lambda x: x==0
 
     def vertex_id(vertex):
         """
@@ -62,7 +62,8 @@ def grid_to_mesh(grid, cell_width, cell_height, hole_func=None):
 
     # Create faces
     for cell, value in np.ndenumerate(grid):
-        if hole_func(value):
+#        print(value)
+        if value==0:
             continue
 
         x, y = cell
@@ -124,6 +125,7 @@ def post_import(obj):
     obj.select_set(False)
 
 def img_to_mesh(imgpath: str,
+                resolution=50,
                 invert=False,
                 epsilon=0.5,
                 height=10,
@@ -145,20 +147,20 @@ def img_to_mesh(imgpath: str,
         object: the new blender's object
     """    
     
-    # TODO: add invert flag
     # Load image into blender and then into numpy array
-    img = load_image(imgpath)
+    img = load_image(imgpath, scale_factor=resolution/100)
     # Use threshold epsilon to determine what pixels are holes
-    low_values_indices = img > epsilon  # Where values are low
+    # and which pixels are voxel
+    low_values_indices = img > epsilon
     if invert:
-        img[low_values_indices] = 255
+        img[low_values_indices] = 1
         img[np.invert(low_values_indices)] = 0 
     else:    
         img[low_values_indices] = 0
-        img[np.invert(low_values_indices)] = 255 
+        img[np.invert(low_values_indices)] = 1 
     
     # Create 2D hole grid
-    verts, faces = grid_to_mesh(img, 0.5, 0.5)
+    verts, faces = grid_to_mesh(img, 1, 1)
 
     # Add third dimmension
     d_verts = [(x, y, 0.) for x, y in verts]
@@ -197,3 +199,7 @@ def compute_intersection(obj1, obj2):
     tmp_obj.modifiers['Boolean'].object = obj2
 
     
+# Testing or if you want to run the script from commandline
+if __name__ == "__main__":
+    clean_scene()
+    img_to_mesh("/home/rage/Documents/3d_projects/ImagesAsMesh/images/pink_rose.jpg", invert=True)
